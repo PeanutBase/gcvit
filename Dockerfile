@@ -53,10 +53,20 @@ FROM api as api-ui
 COPY --from=gcvitui /gcvit/build /app/ui/
 COPY --from=cvitui /cvit/build/ /app/ui/cvitjs/build
 
+FROM gcvitui-dev AS peanutbase
+ADD https://peanutbase.org/data/public/Arachis_hypogaea/aradu1_araip1.gnm1.div.HK28/aradu1_araip1.gnm1.div.HK28.sub10k.vcf.gz /app/assets/
+RUN mkdir -p /app/config \
+  && printf 'HK28:\n  location: assets/aradu1_araip1.gnm1.div.HK28.sub10k.vcf.gz\n  name: aradu1_araip1.gnm1.div.HK28.sub10k.vcf.gz\n  format: vcf\n' > /app/config/assetconfig.yaml
+COPY ./ui/cvitjs/data/soySnp/test-42219.conf /app/ui/cvitjs/data/soySnp/
+RUN mkdir -p /app/config \
+  && gzip -dc /app/assets/aradu1_araip1.gnm1.div.HK28.sub10k.vcf.gz | awk 'BEGIN { FS="[=<>,]"; OFS="\t"; print "##gff-version 3.2.1" } /^[^#]/ { exit } /^##contig=/ {split($4, chrom, /\./); print $4, ".", "chromosome", 1, $6, ".", ".", ".", "Name=" chrom[4] "." chrom[5]}' > /app/ui/cvitjs/data/soySnp/gm_backbone.gff \
+  && sed -i'' 's/^chrom_spacing.*/chrom_spacing = 60/' /app/ui/cvitjs/data/soySnp/test-42219.conf
+
 #assets and config built directly into container
 #This works best with smaller datasets
 FROM api-ui as full
 COPY ui/cvitjs/cvit.conf /app/ui/cvitjs/cvit.conf
 COPY ui/cvitjs/data /app/ui/cvitjs/data
-COPY /config /app/config
-COPY /assets /app/assets
+COPY --from=peanutbase /app/ui/cvitjs/data /app/ui/cvitjs/data
+COPY --from=peanutbase /app/config /app/config
+COPY --from=peanutbase /app/assets /app/assets
