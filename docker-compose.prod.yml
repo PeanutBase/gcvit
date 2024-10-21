@@ -1,7 +1,7 @@
 # production deployment of complete container image
+
 services:
   gcvit:
     build: .
     ports:
-      - "${PORT:-8080}:8080"
-    restart: always
+      - "8080:8080"
